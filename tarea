@@ -1,0 +1,52 @@
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+def arnold_cat_map(imag, itera=1):
+    
+    result = imag.copy()
+    N = 255 #tamaño
+    
+    for _ in range(itera):
+        temp = np.zeros_like(result)
+        for y in range(N):
+            for x in range(N):
+                new_x = (x + y) % N
+                new_y = (x + 2 * y) % N
+                temp[new_y, new_x] = result[y, x]
+        result = temp
+    return result
+
+def calcular_periodo(original):
+    """Calcula cuántas iteraciones se necesitan para recuperar la imagen original"""
+    transformada = original.copy()
+    periodo = 0
+    while True:
+        transformada = arnold_cat_map(transformada, 1)
+        periodo += 1
+        if np.array_equal(transformada, original):
+            return periodo
+        
+def main():
+    original = cv2.imread("img.png", cv2.IMREAD_GRAYSCALE)#carga la imagen
+    scrambled = arnold_cat_map(original, 1)#se aplica la iteracion
+    periodo = calcular_periodo(original) 
+    temp = scrambled.copy()#calcula las iteraciones
+    period = 1
+    while not np.array_equal(temp, original):
+        temp = arnold_cat_map(temp, 1)
+        period += 1
+    recovered = arnold_cat_map(scrambled, period-1)#recupera la imagen
+    print(f"Iteraciones para recuperar la imagen: {periodo}")
+    plt.figure(figsize=(15, 5))#muestra los resultados
+    plt.subplot(1, 3, 1); plt.imshow(original, cmap='gray'); plt.title("Original")
+    plt.subplot(1, 3, 2); plt.imshow(scrambled, cmap='gray'); plt.title("Transformada")
+    plt.subplot(1, 3, 3); plt.imshow(recovered, cmap='gray'); plt.title("Recuperada")
+    plt.show()
+
+    cv2.imwrite("org.png", original)#guarda las imagines
+    cv2.imwrite("trans.png", scrambled)
+    cv2.imwrite("rec.png", recovered)
+
+if __name__ == "__main__":
+    main()
