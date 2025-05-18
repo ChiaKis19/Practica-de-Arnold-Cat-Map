@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def arnold_cat_map(imag, itera=1):
+def acm(imag, itera=1):
     
     result = imag.copy()
     N = 255 #tamaño
@@ -17,36 +17,41 @@ def arnold_cat_map(imag, itera=1):
         result = temp
     return result
 
-def calcular_periodo(original):
-    """Calcula cuántas iteraciones se necesitan para recuperar la imagen original"""
+def cm(original):
     transformada = original.copy()
     periodo = 0
+    min_corr = 1.0
+    mejor_iteracion = 0
+    
     while True:
-        transformada = arnold_cat_map(transformada, 1)
+        transformada = acm(transformada, 1)
         periodo += 1
+        corr = np.corrcoef(original.flatten(), transformada.flatten())[0, 1]
+        
+
+        if corr < min_corr:
+            min_corr = corr
+            mejor_iteracion = periodo
+        
         if np.array_equal(transformada, original):
-            return periodo
+            return periodo, mejor_iteracion, min_corr
         
 def main():
     original = cv2.imread("img.png", cv2.IMREAD_GRAYSCALE)#carga la imagen
-    scrambled = arnold_cat_map(original, 1)#se aplica la iteracion
-    periodo = calcular_periodo(original) 
-    temp = scrambled.copy()#calcula las iteraciones
-    period = 1
-    while not np.array_equal(temp, original):
-        temp = arnold_cat_map(temp, 1)
-        period += 1
-    recovered = arnold_cat_map(scrambled, period-1)#recupera la imagen
-    print(f"Iteraciones para recuperar la imagen: {periodo}")
-    plt.figure(figsize=(15, 5))#muestra los resultados
-    plt.subplot(1, 3, 1); plt.imshow(original, cmap='gray'); plt.title("Original")
-    plt.subplot(1, 3, 2); plt.imshow(scrambled, cmap='gray'); plt.title("Transformada")
-    plt.subplot(1, 3, 3); plt.imshow(recovered, cmap='gray'); plt.title("Recuperada")
-    plt.show()
+    periodo, iter_menor_corr, min_corr = cm(original)
+    scrambled = acm(original, iter_menor_corr)  # Imagen con menor correlación
+    recuperada = acm(scrambled, periodo - iter_menor_corr)  # Recuperación exacta
 
-    cv2.imwrite("org.png", original)#guarda las imagines
-    cv2.imwrite("trans.png", scrambled)
-    cv2.imwrite("rec.png", recovered)
+
+    print(f"Periodo total: {periodo} iteraciones")
+    
+
+
+    plt.figure(figsize=(15, 5))
+    plt.subplot(131); plt.imshow(original, cmap='gray'); plt.title("Original")
+    plt.subplot(132); plt.imshow(scrambled, cmap='gray'); plt.title(f"Transformada (iteracion {iter_menor_corr})")
+    plt.subplot(133); plt.imshow(recuperada, cmap='gray'); plt.title("Recuperada")
+    plt.show()
 
 if __name__ == "__main__":
     main()
